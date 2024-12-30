@@ -21,8 +21,10 @@
 
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.btnStartCapture = new System.Windows.Forms.Button();
             this.grpStation = new System.Windows.Forms.GroupBox();
+            this.secondDeviceCheckBox = new System.Windows.Forms.CheckBox();
             this.txtErrorCode = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.chkLifebit = new System.Windows.Forms.CheckBox();
@@ -46,12 +48,13 @@
             this.txtSpindle2Position = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
             this.grpSpindle1 = new System.Windows.Forms.GroupBox();
+            this.txtSpindle1Position = new System.Windows.Forms.TextBox();
             this.chkSpindle1Done = new System.Windows.Forms.CheckBox();
             this.chkSpindle1NOK = new System.Windows.Forms.CheckBox();
             this.chkSpindle1OK = new System.Windows.Forms.CheckBox();
             this.chkSpindle1Start = new System.Windows.Forms.CheckBox();
-            this.txtSpindle1Position = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.grpStation.SuspendLayout();
             this.grpWorkplan.SuspendLayout();
             this.grpScrewdriver.SuspendLayout();
@@ -67,15 +70,16 @@
             this.btnStartCapture.Location = new System.Drawing.Point(13, 493);
             this.btnStartCapture.Margin = new System.Windows.Forms.Padding(4);
             this.btnStartCapture.Name = "btnStartCapture";
-            this.btnStartCapture.Size = new System.Drawing.Size(659, 124);
+            this.btnStartCapture.Size = new System.Drawing.Size(659, 132);
             this.btnStartCapture.TabIndex = 0;
-            this.btnStartCapture.Text = "Start Capture";
+            this.btnStartCapture.Text = "START CAPTURE";
             this.btnStartCapture.UseVisualStyleBackColor = false;
             this.btnStartCapture.Click += new System.EventHandler(this.btnStartCapture_Click);
             // 
             // grpStation
             // 
             this.grpStation.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
+            this.grpStation.Controls.Add(this.secondDeviceCheckBox);
             this.grpStation.Controls.Add(this.txtErrorCode);
             this.grpStation.Controls.Add(this.label5);
             this.grpStation.Controls.Add(this.chkLifebit);
@@ -94,6 +98,18 @@
             this.grpStation.TabIndex = 1;
             this.grpStation.TabStop = false;
             this.grpStation.Text = "Station Interface";
+            // 
+            // secondDeviceCheckBox
+            // 
+            this.secondDeviceCheckBox.AutoSize = true;
+            this.secondDeviceCheckBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.secondDeviceCheckBox.Location = new System.Drawing.Point(8, 87);
+            this.secondDeviceCheckBox.Margin = new System.Windows.Forms.Padding(4);
+            this.secondDeviceCheckBox.Name = "secondDeviceCheckBox";
+            this.secondDeviceCheckBox.Size = new System.Drawing.Size(101, 21);
+            this.secondDeviceCheckBox.TabIndex = 9;
+            this.secondDeviceCheckBox.Text = "2nd Device";
+            this.secondDeviceCheckBox.UseVisualStyleBackColor = true;
             // 
             // txtErrorCode
             // 
@@ -254,7 +270,7 @@
             // 
             // grpScrewdriver
             // 
-            this.grpScrewdriver.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
+            this.grpScrewdriver.BackColor = System.Drawing.SystemColors.Control;
             this.grpScrewdriver.Controls.Add(this.grpSpindle2);
             this.grpScrewdriver.Controls.Add(this.grpSpindle1);
             this.grpScrewdriver.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -372,6 +388,20 @@
             this.grpSpindle1.TabStop = false;
             this.grpSpindle1.Text = "Spindle 1";
             // 
+            // txtSpindle1Position
+            // 
+            this.txtSpindle1Position.BackColor = System.Drawing.Color.Black;
+            this.txtSpindle1Position.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtSpindle1Position.ForeColor = System.Drawing.Color.White;
+            this.txtSpindle1Position.Location = new System.Drawing.Point(110, 58);
+            this.txtSpindle1Position.Margin = new System.Windows.Forms.Padding(4);
+            this.txtSpindle1Position.Name = "txtSpindle1Position";
+            this.txtSpindle1Position.ReadOnly = true;
+            this.txtSpindle1Position.Size = new System.Drawing.Size(75, 34);
+            this.txtSpindle1Position.TabIndex = 1;
+            this.txtSpindle1Position.Text = "0";
+            this.txtSpindle1Position.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
             // chkSpindle1Done
             // 
             this.chkSpindle1Done.AutoSize = true;
@@ -416,20 +446,6 @@
             this.chkSpindle1Start.Text = "Start";
             this.chkSpindle1Start.UseVisualStyleBackColor = true;
             // 
-            // txtSpindle1Position
-            // 
-            this.txtSpindle1Position.BackColor = System.Drawing.Color.Black;
-            this.txtSpindle1Position.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtSpindle1Position.ForeColor = System.Drawing.Color.White;
-            this.txtSpindle1Position.Location = new System.Drawing.Point(110, 58);
-            this.txtSpindle1Position.Margin = new System.Windows.Forms.Padding(4);
-            this.txtSpindle1Position.Name = "txtSpindle1Position";
-            this.txtSpindle1Position.ReadOnly = true;
-            this.txtSpindle1Position.Size = new System.Drawing.Size(75, 34);
-            this.txtSpindle1Position.TabIndex = 1;
-            this.txtSpindle1Position.Text = "0";
-            this.txtSpindle1Position.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            // 
             // label6
             // 
             this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -439,6 +455,11 @@
             this.label6.Size = new System.Drawing.Size(273, 42);
             this.label6.TabIndex = 0;
             this.label6.Text = "Position sent by PLC:";
+            // 
+            // timer1
+            // 
+            this.timer1.Interval = 300;
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
             // Form1
             // 
@@ -500,5 +521,7 @@
         private System.Windows.Forms.CheckBox chkSpindle1Start;
         private System.Windows.Forms.TextBox txtSpindle1Position;
         private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.CheckBox secondDeviceCheckBox;
+        private System.Windows.Forms.Timer timer1;
     }
 }

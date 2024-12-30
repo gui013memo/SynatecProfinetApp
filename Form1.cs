@@ -13,7 +13,8 @@ namespace SynatecProfinetApp
     public partial class Form1 : Form
     {
         private ICaptureDevice _device;
-        private bool _captureActive = false;  // Track capture status manually (since CaptureStopped is not in 5.2.0)
+
+        bool timerstate = false;
 
         public Form1()
         {
@@ -23,7 +24,6 @@ namespace SynatecProfinetApp
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            // Get capture devices
             var devices = CaptureDeviceList.Instance;
             if (devices.Count < 1)
             {
@@ -31,10 +31,11 @@ namespace SynatecProfinetApp
                 return;
             }
 
-            // For simplicity, pick the first device
-            _device = devices[0];
+            if (secondDeviceCheckBox.Checked)
+                _device = devices[1];
+            else
+                _device = devices[0];
 
-            // Hook up the older signature event
             _device.OnPacketArrival += new PacketArrivalEventHandler(OnPacketArrival);
         }
 
@@ -43,16 +44,39 @@ namespace SynatecProfinetApp
             try
             {
                 _device.Open(DeviceMode.Promiscuous, 1000);
-                
-                // If Profinet uses EtherType 0x8892, you might do:
-                _device.Filter = "ether proto 0x8892"; 
-                
+
+                _device.Filter = "ether proto 0x8892";
+
                 //_device.Filter = "";
 
                 _device.StartCapture();
-                _captureActive = true;
 
-                btnStartCapture.Enabled = false;
+                if (timer1.Enabled)
+                {
+                    timer1.Stop();
+                    secondDeviceCheckBox.Enabled = false;
+                    btnStartCapture.Text = "START CAPTURE";
+                    btnStartCapture.BackColor = Color.Green;
+                    btnStartCapture.ForeColor = Color.White;
+                    timerstate = false;
+
+                    if (_device != null)
+                    {
+
+                        _device.StopCapture();
+                        _device.Close();
+
+                    }
+                }
+                else
+                {
+                    timer1.Start();
+                    secondDeviceCheckBox.Enabled = true;
+                    btnStartCapture.Text = "STOP CAPTURE";
+                }
+
+
+
             }
             catch (Exception ex)
             {
@@ -62,21 +86,12 @@ namespace SynatecProfinetApp
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_device != null && _captureActive)
+            if (_device != null)
             {
-                try
-                {
-                    _device.StopCapture();
-                    _device.Close();
-                }
-                catch
-                {
-                    // Could log or ignore
-                }
-                finally
-                {
-                    _captureActive = false;
-                }
+
+                _device.StopCapture();
+                _device.Close();
+
             }
         }
 
@@ -86,19 +101,42 @@ namespace SynatecProfinetApp
         private void OnPacketArrival(object sender, CaptureEventArgs e)
         {
             var rawPacket = e.Packet.Data;
-            if (rawPacket == null || rawPacket.Length < 100)
+            if (rawPacket == null)
                 return;
 
-            // Offsets below are adapted from your Lua plugin
+            string sourceMacPrefix = string.Format(
+            "{0:x2}:{1:x2}:{2:x2}",
+            rawPacket[6],  // first byte of source MAC
+            rawPacket[7],  // second byte
+            rawPacket[8]   // third byte
+            );
+
+
             int payloadStartOffSet = 26;
-            int typeOffset = payloadStartOffSet + 8;
-            int incOutLifeBitOff = typeOffset + 6;
-            int desLineStpOff = payloadStartOffSet + 15;
-            int errorCodeOff = payloadStartOffSet + 16;
+            int wrkPlanB0Offset = 79;
+
+            // Synatec Master PC
+            if (sourceMacPrefix == "00:03:2d")
+            {
+
+                payloadStartOffSet += 3;
+                wrkPlanB0Offset += 3;
+            }
+
 
             // Station Interface
-            string knr = SafeExtractString(rawPacket, payloadStartOffSet, 8);  // 8 bytes for KNR
-            string type = SafeExtractString(rawPacket, typeOffset, 6);         // 6 bytes for Type
+            int typeOffset = payloadStartOffSet + 8;
+            int incOutLifeBitOff = typeOffset + 6;
+            int errorCodeOff = payloadStartOffSet + 16;
+
+            // Workplan Interface
+            int wrkPlanB1Offset = wrkPlanB0Offset + 1;
+
+            // -- Continue parsing as normal --
+
+            // Station Interface fields
+            string knr = SafeExtractString(rawPacket, payloadStartOffSet, 8);
+            string type = SafeExtractString(rawPacket, typeOffset, 6);
 
             bool incoming = (rawPacket[incOutLifeBitOff] & 0x01) != 0;
             bool outgoing = (rawPacket[incOutLifeBitOff] & 0x02) != 0;
@@ -106,35 +144,34 @@ namespace SynatecProfinetApp
 
             byte errorCode = rawPacket[errorCodeOff];
 
-            // Workplan Interface
-            int wrkPlanB0Offset = 79; // ID Spindle 1
-            int wrkPlanB1Offset = wrkPlanB0Offset + 1; // ID Spindle 2
-
+            // Workplan IDs (spindle1ID, spindle2ID)
             byte spindle1ID = 0;
             byte spindle2ID = 0;
-            if (wrkPlanB1Offset < rawPacket.Length)
+            if (wrkPlanB1Offset + 1 < rawPacket.Length)
             {
                 spindle1ID = rawPacket[wrkPlanB0Offset];
                 spindle2ID = rawPacket[wrkPlanB1Offset];
             }
 
-            // Screwdriver Interface
-            // Using your example offset: errorCodeOffset + 17 + 6 => 16 +17 +6 => 39 from payloadStartOffSet
+            // Screwdriver offset logic
+            //  In your Lua code, you do: 
+            //  local screwDriver1OffSet = errorCodeOffset + 17 + 6
+            //  That’s 16 +17 +6 => 39 from the original base, 
+            //  but if payloadStartOffSet changed, we want to keep it relative to errorCodeOff
             int screwDriver1Offset = errorCodeOff + 17 + 6;
             int screwDriver2Offset = screwDriver1Offset + 5 + 2;
 
             // Spindle 1
             if (screwDriver1Offset + 2 < rawPacket.Length)
             {
-                byte spindle1Pos = rawPacket[screwDriver1Offset];        // position
-                byte spindle1Cmd = rawPacket[screwDriver1Offset + 2];    // start, resultOk, resultNok, etc.
+                byte spindle1Pos = rawPacket[screwDriver1Offset];
+                byte spindle1Cmd = rawPacket[screwDriver1Offset + 2];
 
                 bool spindle1Start = (spindle1Cmd & 0x01) != 0;
                 bool spindle1ResultOk = (spindle1Cmd & 0x10) != 0;
                 bool spindle1ResultNok = (spindle1Cmd & 0x20) != 0;
                 bool spindle1WorkDone = (spindle1Cmd & 0x40) != 0;
 
-                // Update UI safely
                 this.Invoke((MethodInvoker)delegate
                 {
                     txtSpindle1Position.Text = spindle1Pos.ToString();
@@ -148,15 +185,14 @@ namespace SynatecProfinetApp
             // Spindle 2
             if (screwDriver2Offset + 2 < rawPacket.Length)
             {
-                byte spindle2Pos = rawPacket[screwDriver2Offset];      // position
-                byte spindle2Cmd = rawPacket[screwDriver2Offset + 2];  // start, resultOk, etc.
+                byte spindle2Pos = rawPacket[screwDriver2Offset];
+                byte spindle2Cmd = rawPacket[screwDriver2Offset + 2];
 
                 bool spindle2Start = (spindle2Cmd & 0x01) != 0;
                 bool spindle2ResultOk = (spindle2Cmd & 0x10) != 0;
                 bool spindle2ResultNok = (spindle2Cmd & 0x20) != 0;
                 bool spindle2WorkDone = (spindle2Cmd & 0x40) != 0;
 
-                // Update UI safely
                 this.Invoke((MethodInvoker)delegate
                 {
                     txtSpindle2Position.Text = spindle2Pos.ToString();
@@ -167,7 +203,7 @@ namespace SynatecProfinetApp
                 });
             }
 
-            // Finally, update Station/Workplan fields
+            // Finally, update UI for Station/Workplan fields
             this.Invoke((MethodInvoker)delegate
             {
                 txtKNR.Text = knr;
@@ -182,6 +218,7 @@ namespace SynatecProfinetApp
             });
         }
 
+
         // Helper method to safely extract ASCII text from a buffer
         private string SafeExtractString(byte[] buffer, int offset, int length)
         {
@@ -191,5 +228,24 @@ namespace SynatecProfinetApp
             return Encoding.ASCII.GetString(buffer, offset, length).TrimEnd('\0', ' ');
         }
 
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+
+            if (timerstate)
+            {
+                btnStartCapture.BackColor = Color.Gold;
+                btnStartCapture.ForeColor = Color.Black;
+                timerstate = false;
+            }
+            else
+            {
+                btnStartCapture.BackColor = Color.White;
+                btnStartCapture.ForeColor = Color.Black;
+                timerstate = true;
+            }
+
+
+
+        }
     }
 }
